@@ -87,6 +87,7 @@
             me.createLampWires();
             // car
             me.createCar();
+            me.createStaticCars(freeSpace);
             // rain!
 //            me.createRain();
 
@@ -186,6 +187,99 @@
 
             // attach cameras to the car
             me.car.add(T3.ObjectManager.get('camera-main').real);
+        },
+
+        createStaticCars: function (freeSpace) {
+            var me = this,
+                roadUnit = 10 * T3.scale,
+                totalDepth = (freeSpace.rows[freeSpace.rows.length - 1] + 1) * roadUnit,
+                placements = [
+                    {
+                        x: freeSpace.cols[Math.min(1, freeSpace.cols.length - 1)] * roadUnit + roadUnit * 0.3,
+                        z: Math.min(totalDepth - roadUnit * 1.2, freeSpace.rows[Math.min(1, freeSpace.rows.length - 1)] * roadUnit + roadUnit * 1.4),
+                        rotationY: Math.PI,
+                        bodyColor: 0x8a8f99,
+                        specularColor: 0xcfd6df
+                    },
+                    {
+                        x: freeSpace.cols[Math.min(2, freeSpace.cols.length - 1)] * roadUnit + roadUnit * 0.7,
+                        z: Math.min(totalDepth - roadUnit * 1.8, freeSpace.rows[Math.min(2, freeSpace.rows.length - 1)] * roadUnit + roadUnit * 2.2),
+                        rotationY: Math.PI,
+                        bodyColor: 0x6b1d1d,
+                        specularColor: 0xb84b4b
+                    },
+                    {
+                        x: freeSpace.cols[Math.min(3, freeSpace.cols.length - 1)] * roadUnit + roadUnit * 0.3,
+                        z: Math.min(totalDepth - roadUnit * 2.4, freeSpace.rows[Math.min(3, freeSpace.rows.length - 1)] * roadUnit + roadUnit * 1.8),
+                        rotationY: 0,
+                        bodyColor: 0x2f4a63,
+                        specularColor: 0x77a2cf
+                    }
+                ],
+                i;
+
+            me.staticCars = [];
+            for (i = 0; i < placements.length; i += 1) {
+                me.staticCars.push(me.createStaticCarDisplay(placements[i]));
+            }
+        },
+
+        createStaticCarDisplay: function (config) {
+            var me = this,
+                template = me.car,
+                displayCar = new THREE.Object3D();
+
+            function cloneMesh(sourceMesh, parent, options) {
+                var mesh = sourceMesh.clone();
+
+                mesh.geometry = sourceMesh.geometry;
+                mesh.material = sourceMesh.material.clone();
+                mesh.castShadow = sourceMesh.castShadow;
+                mesh.receiveShadow = sourceMesh.receiveShadow;
+
+                if (options && options.color !== undefined && mesh.material.color) {
+                    mesh.material.color.setHex(options.color);
+                }
+                if (options && options.specular !== undefined && mesh.material.specular) {
+                    mesh.material.specular.setHex(options.specular);
+                }
+
+                parent.add(mesh);
+                return mesh;
+            }
+
+            function cloneWheel(sourceWheel) {
+                var wheel = new THREE.Object3D();
+
+                wheel.position.copy(sourceWheel.position);
+                wheel.rotation.copy(sourceWheel.rotation);
+
+                cloneMesh(sourceWheel.tire.real, wheel);
+                cloneMesh(sourceWheel.rim.real, wheel);
+
+                return wheel;
+            }
+
+            cloneMesh(template.body.real, displayCar, {
+                color: config.bodyColor,
+                specular: config.specularColor
+            });
+            cloneMesh(template.exhaust.real, displayCar);
+            cloneMesh(template.windows.real, displayCar);
+            cloneMesh(template.interior.real, displayCar);
+            cloneMesh(template.lightsFront.real, displayCar);
+            cloneMesh(template.lightsBack.real, displayCar);
+
+            displayCar.add(cloneWheel(template.wheelBackLeft));
+            displayCar.add(cloneWheel(template.wheelBackRight));
+            displayCar.add(cloneWheel(template.wheelFrontLeft));
+            displayCar.add(cloneWheel(template.wheelFrontRight));
+
+            displayCar.position.set(config.x, 0, config.z);
+            displayCar.rotation.y = config.rotationY || 0;
+            scene.add(displayCar);
+
+            return displayCar;
         },
 
         createStaticObject: function (config) {
